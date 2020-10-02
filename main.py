@@ -203,6 +203,7 @@ def main():
     flats_parser = DomodedovoGradFlatsParser()
     flats_urls = flats_urls_parser.collect()
     flats_info_json = flats_parser.collect(flats_urls)
+    print(flats_info_json)
     return flats_info_json
 
 
