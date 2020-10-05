@@ -1,7 +1,6 @@
 import abc
 import json
 import typing
-import re
 # import logging
 
 import typing_extensions
@@ -145,8 +144,12 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         super().__init__()
         self.url_adapter = 'https://www.domodedovograd.ru/'
 
-    @staticmethod
-    def parse_flat_page(page_text: str) -> ResponseSchema:
+    def get_plan_images(self, url) -> typing.Optional[typing.List[dict]]:
+        response = self.session.get(url)
+        if response.status_code == 200:
+            return response.json()
+
+    def parse_flat_page(self, page_text: str) -> ResponseSchema:
         complex_ = "Домодедово парк(Московская область, г.Домодедово, с.Домодедово, ул.Творчества)"
         type_ = 'flat'
 
@@ -168,6 +171,17 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         price_finished = str(tree.xpath('.//div[@class="m-passport-price-bar__price"]/text()')[0])
         price_finished = float(''.join([char for char in price_finished if char.isdigit()]))
 
+        number_on_site = str(tree.xpath('//comment()')[0])
+        number_on_site = ''.join([char for char in number_on_site if char.isdigit()])
+
+        plan_data_url = '/flat-images.json?flatId=' + number_on_site
+        plan_images = self.get_plan_images(self.url_adapter + plan_data_url.strip('/'))
+        if plan_images:
+            plan = str(plan_images[0].get("sm"))
+            plan = self.url_adapter + plan.strip('/')
+        else:
+            plan = None
+
         return ResponseSchema(
             complex=complex_,
             type=type_,
@@ -175,14 +189,16 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
             section=section,
             floor=floor,
             number=number,
-            number_on_site=number,
+            number_on_site=number_on_site,
             rooms=rooms,
             area=area,
             living_area=living_area,
             phase=phase,
+            plan=plan,
             price_finished=price_finished,
             sale_status=sale_status,
-            in_sale=in_sale
+            in_sale=in_sale,
+            finished=1
         )
 
     def get_flat_page(self, flat_url: str) -> str:
@@ -216,6 +232,7 @@ def main():
     flats_urls_parser = DomodedovoGradUrlsParser()
     flats_parser = DomodedovoGradFlatsParser()
     flats_urls = flats_urls_parser.collect()
+    # flats_urls = {'/domodedovo/corpus-8/section-2/floor-2/flat-101',}
     flats_info_json = flats_parser.collect(flats_urls)
     print(flats_info_json)  # sys.stdout by default
     return flats_info_json
