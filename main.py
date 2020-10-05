@@ -1,7 +1,8 @@
 import abc
 import json
 import typing
-import logging
+import re
+# import logging
 
 import typing_extensions
 import requests
@@ -9,9 +10,12 @@ import lxml.html
 
 DEFAULT_TIMEOUT = 60
 
-logging.basicConfig(level=logging.INFO,
-                    format='{"level": "%(levelname)s", "name": "%(name)s", "msg": "%(message)s", time":"%(asctime)s"}',
-                    datefmt='%Y-%m-%dT%H:%M:%S')
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='{"level": "%(levelname)s", "name": "%(name)s", "msg": "%(message)s", time":"%(asctime)s"}',
+#     datefmt='%Y-%m-%dT%H:%M:%S'
+# )
 
 
 class ResponseSchema(typing_extensions.TypedDict, total=False):
@@ -82,7 +86,7 @@ class DomodedovoGradUrlsParser(DomodedovoGradABC):
         try:
             json_obj = json.loads(text)
         except json.JSONDecodeError as e:
-            print(e)  # raise some error
+            # print(e)  # raise some error
             return 0
         else:
             return json_obj['prodCount']
@@ -127,7 +131,7 @@ class DomodedovoGradUrlsParser(DomodedovoGradABC):
         flats_amount = self.__get_flats_amount()
         flats_per_page = self.__get_count_per_page()
         total = self._calculate_paging(flats_amount, flats_per_page)
-        logging.info(f'Total pages count {total}: flats amount - {flats_amount}, flats per page - {flats_per_page}')
+        # logging.info(f'Total pages count {total}: flats amount - {flats_amount}, flats per page - {flats_per_page}')
         pages_urls = [self.base_url + str(page_num) for page_num in range(1, total + 1)]
         res = self.get_flats_urls(pages_urls)
 
@@ -161,6 +165,9 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         sale_status = 'Забронировано' if is_reserved else None
         in_sale = True
 
+        price_finished = str(tree.xpath('.//div[@class="m-passport-price-bar__price"]/text()')[0])
+        price_finished = float(''.join([char for char in price_finished if char.isdigit()]))
+
         return ResponseSchema(
             complex=complex_,
             type=type_,
@@ -168,10 +175,12 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
             section=section,
             floor=floor,
             number=number,
+            number_on_site=number,
             rooms=rooms,
             area=area,
             living_area=living_area,
             phase=phase,
+            price_finished=price_finished,
             sale_status=sale_status,
             in_sale=in_sale
         )
@@ -190,11 +199,16 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
 
     def collect(self, flats_urls: typing.Set[str]) -> str:
         result: typing.List[ResponseSchema] = []
-        logging.info(f'Started parsing of {len(flats_urls)} urls count')
+        # logging.info(f'Started parsing of {len(flats_urls)} urls count')
         for flat_url in flats_urls:
-            page_text = self.get_flat_page(flat_url)
-            result.append(self.parse_flat_page(page_text))
-        logging.info(f'Parsing of {len(flats_urls)} urls is over')
+            try:
+                page_text = self.get_flat_page(flat_url)
+            except Exception as e:
+                # logging.error(e)
+                pass
+            else:
+                result.append(self.parse_flat_page(page_text))
+        # logging.info(f'Parsing of {len(flats_urls)} urls is over')
         return json.dumps(result, ensure_ascii=False)
 
 
@@ -203,7 +217,7 @@ def main():
     flats_parser = DomodedovoGradFlatsParser()
     flats_urls = flats_urls_parser.collect()
     flats_info_json = flats_parser.collect(flats_urls)
-    print(flats_info_json)
+    print(flats_info_json)  # sys.stdout by default
     return flats_info_json
 
 
