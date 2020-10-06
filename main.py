@@ -74,21 +74,28 @@ class DomodedovoGradUrlsParser(DomodedovoGradABC):
         return cards
 
     def __get_flats_amount(self) -> int:
-        smart_filter_form = self.session.get(
-            'https://www.domodedovograd.ru/ajax/GetSmartFilterForm.json?grp=242602&grp=242602&page=1',
-            timeout=DEFAULT_TIMEOUT
-        )
-        if smart_filter_form.status_code != 200:
-            return 0
+        retries = 3
+        while retries:
+            retries -= 1
+            try:
+                smart_filter_form = self.session.get(
+                    'https://www.domodedovograd.ru/ajax/GetSmartFilterForm.json?grp=242602&grp=242602&page=1',
+                    timeout=DEFAULT_TIMEOUT
+                )
+            except requests.Timeout:
+                return 0
 
-        text = smart_filter_form.text
-        try:
-            json_obj = json.loads(text)
-        except json.JSONDecodeError as e:
-            # print(e)  # raise some error
-            return 0
-        else:
-            return json_obj['prodCount']
+            if smart_filter_form.status_code != 200:
+                return 0
+
+            text = smart_filter_form.text
+            try:
+                json_obj = json.loads(text)
+            except json.JSONDecodeError as e:
+                # print(e)  # raise some error
+                return 0
+            else:
+                return json_obj['prodCount']
 
     def __get_count_per_page(self) -> int:
         first_page_url = self.base_url + '1'
@@ -145,7 +152,7 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         self.url_adapter = 'https://www.domodedovograd.ru/'
 
     def get_plan_images(self, url) -> typing.Optional[typing.List[dict]]:
-        response = self.session.get(url)
+        response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
         if response.status_code == 200:
             return response.json()
 
@@ -162,8 +169,8 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         section = params_dl[1]
         floor = params_dl[2]
         number = params_dl[3]
-        rooms = params_dl[4] if 'Студия' not in flat_type else 'studio'
-        area = living_area = params_dl[5]
+        rooms = int(params_dl[4]) if 'Студия' not in flat_type else 'studio'
+        area = living_area = float(str(params_dl[5]).replace(',', '.'))
         phase = params_dl[6]
         sale_status = 'Забронировано' if is_reserved else None
         in_sale = True
