@@ -83,7 +83,7 @@ class DomodedovoGradUrlsParser(DomodedovoGradABC):
                     timeout=DEFAULT_TIMEOUT
                 )
             except requests.Timeout:
-                return 0
+                continue
 
             if smart_filter_form.status_code != 200:
                 return 0
