@@ -173,10 +173,10 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
         area = living_area = float(str(params_dl[5]).replace(',', '.'))
         phase = params_dl[6]
         sale_status = 'Забронировано' if is_reserved else None
-        in_sale = True
+        in_sale = 1
 
-        price_finished = str(tree.xpath('.//div[@class="m-passport-price-bar__price"]/text()')[0])
-        price_finished = float(''.join([char for char in price_finished if char.isdigit()]))
+        price_base = str(tree.xpath('.//div[@class="m-passport-price-bar__price"]/text()')[0])
+        price_base = float(''.join([char for char in price_base if char.isdigit()]))
 
         number_on_site = str(tree.xpath('//comment()')[0])
         number_on_site = ''.join([char for char in number_on_site if char.isdigit()])
@@ -196,16 +196,16 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
             section=section,
             floor=floor,
             number=number,
-            number_on_site=number_on_site,
+            number_on_site=number,
             rooms=rooms,
             area=area,
             living_area=living_area,
             phase=phase,
             plan=plan,
-            price_finished=price_finished,
+            price_base=price_base,
             sale_status=sale_status,
             in_sale=in_sale,
-            finished=1
+            finished=0
         )
 
     def get_flat_page(self, flat_url: str) -> str:
