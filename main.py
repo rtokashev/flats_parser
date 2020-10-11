@@ -196,7 +196,6 @@ class DomodedovoGradFlatsParser(DomodedovoGradABC):
             section=section,
             floor=floor,
             number=number,
-            number_on_site=number,
             rooms=rooms,
             area=area,
             living_area=living_area,
